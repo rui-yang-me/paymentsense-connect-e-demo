@@ -82,14 +82,23 @@ cd ../paymentsense-sdk
 mvn clean install -DskipTests
 ```
 
-### 问题 2: Maven 未安装
+### 问题 2: SDK 依赖下载失败
+
+**错误**: 依赖下载不下来，可能是 Maven 索引还没建立
+
+**解决方案**: 手动执行以下命令下载依赖
+```bash
+mvn dependency:get -DrepoUrl=https://repo1.maven.org/maven2 -Dartifact=io.github.rui-yang-me:paymentsense-connect-e-sdk:1.0.3 -U
+```
+
+### 问题 3: Maven 未安装
 
 如果系统没有 Maven，可以：
 1. 使用 IDE 的内置 Maven
 2. 下载 Maven Wrapper: `mvn wrapper:wrapper`
 3. 安装 Maven: [https://maven.apache.org/install.html](https://maven.apache.org/install.html)
 
-### 问题 3: 端口被占用
+### 问题 4: 端口被占用
 
 修改 `application.properties`:
 ```properties
