@@ -22,14 +22,7 @@
 
 ## 快速开始
 
-### 方式 1: 使用启动脚本（推荐）
-
-```bash
-chmod +x run.sh
-./run.sh
-```
-
-### 方式 2: 手动构建和运行
+### 方式 1: 手动构建和运行
 
 #### 步骤 1: 确保 SDK 已构建
 
@@ -114,7 +107,7 @@ server.port=8081
 ### 新增功能 🆕
 - `POST /api/payments/{paymentId}/resume` - 恢复支付会话
 - `DELETE /api/access-tokens/{tokenId}` - 撤销访问令牌
-- `GET /api/payment-methods?customerId={customerId}` - 获取客户的支付方式列表
+- `GET /api/payment-methods` - 获取客户的支付方式列表
 
 ### 系统功能
 - `GET /api/health` - 健康检查
