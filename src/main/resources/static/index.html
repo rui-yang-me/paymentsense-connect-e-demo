@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Paymentsense SDK Demo</title>
+  <meta name="description" content="Paymentsense Connect-E SDK 演示应用 - 支持创建支付、查询状态和退款">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <link href="https://fonts.googleapis.com/css?family=Do+Hyeon" rel="stylesheet">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://web.e.test.connect.paymentsense.cloud/assets/js/client.js"></script>
+  <style>
+    body {
+      max-width: 900px;
+      margin: 30px auto;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .section {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      background-color: #f9f9f9;
+    }
+
+    .section h4 {
+      margin-bottom: 15px;
+      color: #333;
+      font-weight: 600;
+    }
+
+    #payment-form iframe {
+      width: 100%;
+      min-height: 200px;
+    }
+
+    .result-box {
+      background-color: #fff;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 15px;
+      margin-top: 10px;
+    }
+
+    .success {
+      color: #28a745;
+      font-weight: bold;
+    }
+
+    .error {
+      color: #dc3545;
+      font-weight: bold;
+    }
+
+    .info-row {
+      margin-bottom: 8px;
+      word-wrap: break-word;
+      word-break: break-all;
+    }
+
+    .info-label {
+      font-weight: 600;
+      color: #666;
+      min-width: 150px;
+      display: inline-block;
+    }
+    
+    .info-row span:not(.info-label) {
+      word-wrap: break-word;
+      word-break: break-all;
+      display: inline-block;
+      max-width: calc(100% - 160px);
+      vertical-align: top;
+    }
+
+    .btn-custom {
+      margin-top: 10px;
+    }
+
+    #errors {
+      color: #dc3545;
+    }
+
+    .step-number {
+      display: inline-block;
+      width: 30px;
+      height: 30px;
+      background-color: #007bff;
+      color: white;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 30px;
+      margin-right: 10px;
+      font-weight: bold;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    pre {
+      background-color: #f4f4f4;
+      padding: 10px;
+      border-radius: 5px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h2 class="text-center mb-4">Paymentsense SDK Demo</h2>
+    <p class="text-center text-muted mb-4">演示如何使用 Paymentsense Connect-E SDK 进行支付、查询和退款</p>
+
+    <!-- Step 1: 创建支付 Token -->
+    <div class="section">
+      <h4><span class="step-number">1</span>创建支付 Token</h4>
+      <form id="token-form">
+        <div class="form-row">
+          <div class="form-group col-md-4">
+            <label for="amount">支付金额（最小单位）</label>
+            <input type="text" class="form-control" id="amount" value="100" required>
+            <small class="form-text text-muted">100 = 1.00 GBP</small>
+          </div>
+          <div class="form-group col-md-4">
+            <label for="currency">货币</label>
+            <select class="form-control" id="currency" required>
+              <option value="GBP" selected>GBP - 英镑</option>
+              <option value="EUR">EUR - 欧元</option>
+              <option value="USD">USD - 美元</option>
+            </select>
+          </div>
+          <div class="form-group col-md-4">
+            <label for="txntype">交易类型</label>
+            <select class="form-control" id="txntype" required>
+              <option value="SALE" selected>SALE - 即时支付</option>
+              <option value="PREAUTH">PREAUTH - 预授权</option>
+            </select>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">创建支付 Token</button>
+      </form>
+
+      <div id="token-result" class="result-box hidden">
+        <div class="info-row">
+          <span class="info-label">Token ID:</span>
+          <span id="token-id"></span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">订单ID:</span>
+          <span id="order-id"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: 执行支付 -->
+    <div class="section hidden" id="payment-section">
+      <h4><span class="step-number">2</span>执行支付</h4>
+      <p class="text-muted">请在下方表单中输入测试卡信息</p>
+      <div id="payment-form"></div>
+      <button id="pay-btn" class="btn btn-success btn-block btn-custom hidden">确认支付</button>
+      <div id="errors" class="mt-2"></div>
+    </div>
+
+    <!-- Step 3: 支付结果 -->
+    <div class="section hidden" id="result-section">
+      <h4><span class="step-number">3</span>支付结果</h4>
+      <div id="payment-result" class="result-box"></div>
+    </div>
+
+    <!-- Step 4: 退款操作 -->
+    <div class="section hidden" id="refund-section">
+      <h4><span class="step-number">4</span>退款操作</h4>
+      <form id="refund-form">
+        <div class="form-row">
+          <div class="form-group col-md-8">
+            <label for="refund-amount">退款金额（可选，留空为全额退款）</label>
+            <input type="text" class="form-control" id="refund-amount" placeholder="留空为全额退款">
+          </div>
+          <div class="form-group col-md-4 d-flex align-items-end">
+            <button type="submit" class="btn btn-warning btn-block">执行退款</button>
+          </div>
+        </div>
+      </form>
+
+      <div id="refund-result" class="result-box hidden"></div>
+    </div>
+
+    <!-- 测试卡信息提示 -->
+    <div class="section">
+      <h4>测试卡信息</h4>
+      <div class="result-box">
+        <ul>
+          <li>卡名字: Sherlock Holmes</li>
+          <li>卡号: 4111111111111111</li>
+          <li>过期日期: 12/25 </li>
+          <li>CVV: 111</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentTokenId = null;
+    let connectEInstance = null;
+
+    // 显示错误信息
+    function displayErrors(errors) {
+      const errorsDiv = document.getElementById('errors');
+      errorsDiv.innerHTML = '';
+      if (errors && errors.length) {
+        const list = document.createElement('ul');
+        errors.forEach(function (error) {
+          const item = document.createElement('li');
+         let msg = error.message || error;
+         if (typeof msg === 'object') {
+           msg = JSON.stringify(msg);
+         }
+          item.innerText = msg;
+          list.appendChild(item);
+        });
+        errorsDiv.appendChild(list);
+      }
+    }
+
+    // Connect-E 表单样式
+    const styles = {
+      base: {
+        default: {
+          color: 'black',
+          fontFamily: "'Do Hyeon', sans-serif",
+          padding: '.375rem .75rem',
+          fontSize: '1rem',
+          borderRadius: '.25rem',
+          backgroundColor: '#fff',
+        },
+        focus: {
+          borderColor: '#80bdff',
+        },
+        error: {
+          color: '#dc3545',
+          borderColor: '#dc3545',
+        },
+        valid: {
+          color: '#28a745',
+          borderColor: '#28a745',
+        },
+      },
+    };
+
+    // Step 1: 创建支付 Token
+    document.getElementById('token-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const amount = document.getElementById('amount').value;
+      const currency = document.getElementById('currency').value;
+      const transactionType = document.getElementById('txntype').value;
+
+      // 保存货币类型用于退款
+      currentCurrency = currency;
+
+      try {
+        const response = await fetch('/api/create-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount, currency, transactionType })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          currentTokenId = data.tokenId;
+
+          // 显示 Token 信息
+          document.getElementById('token-id').textContent = data.tokenId;
+          document.getElementById('order-id').textContent = data.orderId;
+          document.getElementById('token-result').classList.remove('hidden');
+
+          // 初始化支付表单
+          initPaymentForm(data);
+
+          // 显示支付区域
+          document.getElementById('payment-section').classList.remove('hidden');
+        } else {
+          alert('创建 Token 失败: ' + data.error);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('请求失败: ' + error.message);
+      }
+    });
+
+    // 初始化支付表单
+    function initPaymentForm(tokenData) {
+      const paymentDetails = {
+        amount: tokenData.amount,
+        currencyCode: tokenData.currency === 'GBP' ? '826' :
+                     tokenData.currency === 'EUR' ? '978' : '840',
+        paymentToken: tokenData.tokenId
+      };
+
+      const config = {
+        paymentDetails: paymentDetails,
+        containerId: 'payment-form',
+        fontCss: ['https://fonts.googleapis.com/css?family=Do+Hyeon'],
+        styles: styles,
+      };
+
+      connectEInstance = new Connect.ConnectE(config, displayErrors);
+      document.getElementById('pay-btn').classList.remove('hidden');
+    }
+
+    // Step 2: 执行支付
+    document.getElementById('pay-btn').addEventListener('click', async () => {
+      document.getElementById('pay-btn').disabled = true;
+
+      try {
+        const paymentResult = await connectEInstance.executePayment();
+        console.log('Payment executed:', paymentResult);
+
+        // 查询支付状态
+        await checkPaymentStatus(currentTokenId);
+
+      } catch (error) {
+        console.error('Payment failed:', error);
+        displayErrors([error]);
+        document.getElementById('pay-btn').disabled = false;
+      }
+    });
+
+    // 查询支付状态
+    async function checkPaymentStatus(tokenId) {
+      try {
+        const response = await fetch(`/api/payment-status/${tokenId}`);
+        const data = await response.json();
+
+        // 保存支付信息用于退款
+        currentPaymentInfo = data;
+
+        // 隐藏支付表单
+        document.getElementById('payment-section').classList.add('hidden');
+
+        // 显示支付结果
+        const resultDiv = document.getElementById('payment-result');
+        const statusClass = data.success ? 'success' : 'error';
+        const statusText = data.success ? '支付成功' : '支付失败';
+
+        resultDiv.innerHTML = `
+          <div class="${statusClass}" style="font-size: 18px; margin-bottom: 15px;">
+            ${statusText}
+          </div>
+          <div class="info-row">
+            <span class="info-label">状态码:</span> ${data.statusCode}
+          </div>
+          <div class="info-row">
+            <span class="info-label">授权码:</span> ${data.authCode || 'N/A'}
+          </div>
+          <div class="info-row">
+            <span class="info-label">交易参考号:</span> ${data.crossReference || 'N/A'}
+          </div>
+          <div class="info-row">
+            <span class="info-label">交易时间:</span> ${data.transactionDateTime || 'N/A'}
+          </div>
+          <div class="info-row">
+            <span class="info-label">卡类型:</span> ${data.cardType || 'N/A'}
+          </div>
+          <div class="info-row">
+            <span class="info-label">卡号:</span> ${data.cardNumber || 'N/A'}
+          </div>
+          <div class="info-row">
+            <span class="info-label">持卡人:</span> ${data.cardName || 'N/A'}
+          </div>
+          <div class="info-row">
+            <span class="info-label">有效期:</span> ${data.expiryDate || 'N/A'}
+          </div>
+          <div class="info-row">
+            <span class="info-label">消息:</span> ${data.message || ''}
+          </div>
+        `;
+
+        document.getElementById('result-section').classList.remove('hidden');
+
+        // 如果支付成功，显示退款选项
+        if (data.success) {
+          document.getElementById('refund-section').classList.remove('hidden');
+        }
+
+      } catch (error) {
+        console.error('Error checking payment status:', error);
+        alert('查询支付状态失败: ' + error.message);
+      }
+    }
+
+    // 保存当前支付信息（用于退款）
+    let currentPaymentInfo = null;
+    let currentCurrency = null;
+
+    // Step 4: 执行退款
+    document.getElementById('refund-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const refundButton = e.target.querySelector('button');
+      refundButton.disabled = true;
+      refundButton.textContent = '处理中...';
+
+      const refundAmount = document.getElementById('refund-amount').value;
+
+      try {
+        // Step 4.1: 获取原支付信息（如果还没有）
+        if (!currentPaymentInfo) {
+          const statusResponse = await fetch(`/api/payment-status/${currentTokenId}`);
+          currentPaymentInfo = await statusResponse.json();
+        }
+
+        if (!currentPaymentInfo.crossReference) {
+          throw new Error('无法获取原支付的交易参考号');
+        }
+
+        // Step 4.2: 创建退款 Token
+        const refundTokenResponse = await fetch('/api/create-refund-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            token: currentTokenId,
+            amount: refundAmount || document.getElementById('amount').value,
+            currency: currentCurrency || document.getElementById('currency').value
+          })
+        });
+
+        const refundTokenData = await refundTokenResponse.json();
+
+        if (!refundTokenData.success) {
+          throw new Error(refundTokenData.error || '创建退款Token失败');
+        }
+
+        console.log('Refund token created:', refundTokenData.tokenId);
+
+        // Step 4.3: 执行 Cross Reference Payment
+        const crossRefResponse = await fetch(`/api/cross-reference-payments/${refundTokenData.tokenId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            crossReference: currentPaymentInfo.crossReference
+          })
+        });
+
+        const refundResult = await crossRefResponse.json();
+
+        // 显示退款结果
+        const resultDiv = document.getElementById('refund-result');
+        const statusClass = refundResult.success ? 'success' : 'error';
+        const statusText = refundResult.success ? '退款成功' : '退款失败';
+
+        resultDiv.innerHTML = `
+          <div class="${statusClass}" style="font-size: 18px; margin-bottom: 15px;">
+            ${statusText}
+          </div>
+          <div class="info-row">
+            <span class="info-label">退款Token ID:</span> ${refundTokenData.tokenId}
+          </div>
+          <div class="info-row">
+            <span class="info-label">状态码:</span> ${refundResult.statusCode}
+          </div>
+          <div class="info-row">
+            <span class="info-label">授权码:</span> ${refundResult.authCode || 'N/A'}
+          </div>
+          <div class="info-row">
+            <span class="info-label">消息:</span> ${refundResult.message || ''}
+          </div>
+        `;
+
+        resultDiv.classList.remove('hidden');
+
+        // 禁用退款按钮（防止重复退款）
+        refundButton.textContent = '已退款';
+
+      } catch (error) {
+        console.error('Error processing refund:', error);
+        alert('退款请求失败: ' + error.message);
+        refundButton.disabled = false;
+        refundButton.textContent = '执行退款';
+      }
+    });
+  </script>
+</body>
+
+</html>
